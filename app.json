@@ -16,15 +16,22 @@
     ],
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.hoardingapp",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs access to location to show nearby hoardings.",
         "NSLocationAlwaysUsageDescription": "This app needs access to location to show nearby hoardings."
       }
     },
     "android": {
+      "package": "com.yourcompany.hoardingapp",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_ANDROID_API_KEY"
+        }
       },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
@@ -34,6 +41,14 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to show nearby hoardings."
+        }
+      ]
+    ],
     "newArchEnabled": false
   }
 } 

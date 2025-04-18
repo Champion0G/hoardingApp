@@ -21,15 +21,52 @@ const HomeScreen = ({ navigation }) => {
     try {
       console.log('Fetching all hoardings from API...');
       const response = await hoardingsApi.getAll();
-      console.log('API Response:', response);
-      if (Array.isArray(response)) {
-        console.log('Setting hoardings:', response.length);
-        setCurrentHoardings(response);
-        return response;
-      } else {
-        console.error('Invalid response format:', response);
+      
+      if (!Array.isArray(response)) {
+        console.error('Invalid API response format:', response);
         throw new Error('Invalid response format from API');
       }
+
+      // Validate and format hoarding data
+      const validHoardings = response.filter(hoarding => {
+        // Check basic hoarding structure
+        if (!hoarding?._id || !hoarding?.location?.coordinates) {
+          console.debug('Invalid hoarding structure:', hoarding);
+          return false;
+        }
+
+        // Ensure coordinates array has exactly 2 elements
+        if (!Array.isArray(hoarding.location.coordinates) || 
+            hoarding.location.coordinates.length !== 2) {
+          console.debug('Invalid coordinates array:', hoarding._id);
+          return false;
+        }
+
+        // Extract and validate coordinates
+        const [longitude, latitude] = hoarding.location.coordinates.map(Number);
+        
+        if (typeof latitude !== 'number' || 
+            typeof longitude !== 'number' ||
+            isNaN(latitude) || 
+            isNaN(longitude) ||
+            latitude < -90 || 
+            latitude > 90 ||
+            longitude < -180 || 
+            longitude > 180) {
+          console.debug('Invalid coordinate values:', {
+            id: hoarding._id,
+            latitude,
+            longitude
+          });
+          return false;
+        }
+
+        return true;
+      });
+
+      console.debug(`Found ${validHoardings.length} valid hoardings out of ${response.length} total`);
+      setCurrentHoardings(validHoardings);
+      return validHoardings;
     } catch (error) {
       console.error('Error fetching hoardings:', error);
       throw error;
@@ -45,25 +82,38 @@ const HomeScreen = ({ navigation }) => {
 
           // Get location permission and current position
           let { status } = await Location.requestForegroundPermissionsAsync();
+          
+          const defaultRegion = {
+            latitude: 20.5937,  // Center of India
+            longitude: 78.9629,
+            latitudeDelta: 20,
+            longitudeDelta: 20,
+          };
+
           if (status !== 'granted') {
-            console.log('Location permission denied');
-            // Use a default location if permission denied
-            setInitialRegion({
-              latitude: 20.5937,  // Default to center of India
-              longitude: 78.9629,
-              latitudeDelta: 0.0922,
-              longitudeDelta: 0.0421,
-            });
+            console.log('Location permission denied, using default region');
+            setInitialRegion(defaultRegion);
           } else {
-            // Get current location
-            const location = await Location.getCurrentPositionAsync({});
-            console.log('Current location:', location);
-            setInitialRegion({
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-              latitudeDelta: 0.0922,
-              longitudeDelta: 0.0421,
-            });
+            try {
+              const location = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced
+              });
+              
+              if (location?.coords) {
+                setInitialRegion({
+                  latitude: Number(location.coords.latitude),
+                  longitude: Number(location.coords.longitude),
+                  latitudeDelta: 0.0922,
+                  longitudeDelta: 0.0421,
+                });
+              } else {
+                console.warn('Invalid location data, using default region');
+                setInitialRegion(defaultRegion);
+              }
+            } catch (locationError) {
+              console.error('Error getting location:', locationError);
+              setInitialRegion(defaultRegion);
+            }
           }
 
           // Fetch all hoardings
@@ -80,10 +130,13 @@ const HomeScreen = ({ navigation }) => {
     }, [])
   );
 
-  const handleRegionChange = (region) => {
-    // Handle region change if needed
+  const handleRegionChange = useCallback((region) => {
+    if (!region || typeof region.latitude !== 'number' || typeof region.longitude !== 'number') {
+      console.warn('Invalid region:', region);
+      return;
+    }
     console.log('Region changed:', region);
-  };
+  }, []);
 
   const handleMarkerPress = (hoarding) => {
     console.log('Marker pressed:', hoarding);

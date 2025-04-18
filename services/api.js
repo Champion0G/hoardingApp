@@ -14,8 +14,8 @@ const getApiUrl = () => {
       // For Android Emulator
       return 'http://10.0.2.2:5000/api';
     } else if (Platform.OS === 'ios') {
-      // For iOS Simulator
-      return 'http://localhost:5000/api';
+      // For both iOS Simulator and physical devices
+      return 'http://192.168.29.210:5000/api';
     }
   }
   // For production
