@@ -9,7 +9,17 @@ const app = express();
 
 // Configure CORS
 app.use(cors({
-  origin: ['http://localhost:19000', 'http://localhost:19001', 'http://localhost:19002', 'http://localhost:8081', 'exp://192.168.29.210:8081'],
+  origin: [
+    'http://localhost:19000',
+    'http://localhost:19001', 
+    'http://localhost:19002',
+    'http://localhost:8081',
+    'exp://192.168.29.210:8081',
+    'http://192.168.29.210:5000',
+    'http://192.168.29.210:19000',
+    'http://192.168.29.210:19001',
+    'http://192.168.29.210:19002'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true

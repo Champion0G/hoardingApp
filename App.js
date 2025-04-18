@@ -25,7 +25,6 @@ import HomeScreen from './screens/HomeScreen';
 import SearchScreen from './screens/SearchScreen';
 import LoginScreen from './screens/LoginScreen';
 import RoleSelectScreen from './screens/RoleSelectScreen';
-import AddHoardingScreen from './screens/AddHoardingScreen';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 const Tab = createBottomTabNavigator();
@@ -44,8 +43,6 @@ function TabNavigator() {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Search') {
             iconName = focused ? 'search' : 'search-outline';
-          } else if (route.name === 'Add Hoarding') {
-            iconName = focused ? 'add-circle' : 'add-circle-outline';
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -56,9 +53,6 @@ function TabNavigator() {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Search" component={SearchScreen} />
-      {userRole === 'authorized' && (
-        <Tab.Screen name="Add Hoarding" component={AddHoardingScreen} />
-      )}
     </Tab.Navigator>
   );
 }

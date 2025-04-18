@@ -7,14 +7,18 @@ const getApiUrl = () => {
   if (__DEV__) {
     // Development environment
     if (Platform.OS === 'android') {
+      if (!Platform.isTV) {
+        // For physical Android devices
+        return 'http://192.168.29.210:5000/api';
+      }
       // For Android Emulator
-      return 'http://localhost:5000/api';
+      return 'http://10.0.2.2:5000/api';
     } else if (Platform.OS === 'ios') {
       // For iOS Simulator
       return 'http://localhost:5000/api';
     }
   }
-  // For physical devices or production
+  // For production
   return 'http://192.168.29.210:5000/api';
 };
 
@@ -154,18 +158,6 @@ export const auth = {
 };
 
 export const hoardings = {
-  add: async (hoardingData) => {
-    try {
-      console.log('Adding hoarding:', hoardingData);
-      const response = await api.post('/hoardings/add', hoardingData);
-      console.log('Hoarding added successfully');
-      return response.data;
-    } catch (error) {
-      console.error('Failed to add hoarding:', error);
-      throw typeof error === 'string' ? error : 'Failed to add hoarding. Please try again.';
-    }
-  },
-
   getNearby: async (latitude, longitude, radius = 5000) => {
     try {
       console.log('Fetching nearby hoardings:', { latitude, longitude, radius });
