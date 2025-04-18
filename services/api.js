@@ -162,6 +162,12 @@ export const hoardings = {
     try {
       console.log('Adding hoarding:', hoardingData);
       const response = await api.post('/hoardings/add', hoardingData);
+      
+      // Clear all cached hoarding data to ensure fresh data
+      const keys = await AsyncStorage.getAllKeys();
+      const cachesToClear = keys.filter(key => key.startsWith('nearby_hoardings_'));
+      await AsyncStorage.multiRemove(cachesToClear);
+      
       console.log('Hoarding added successfully');
       return response.data;
     } catch (error) {
@@ -173,12 +179,50 @@ export const hoardings = {
   getNearby: async (latitude, longitude, radius = 5000) => {
     try {
       console.log('Fetching nearby hoardings:', { latitude, longitude, radius });
+      
+      // Round coordinates to reduce cache variations
+      const roundedLat = Math.round(latitude * 1000) / 1000;
+      const roundedLng = Math.round(longitude * 1000) / 1000;
+      
+      const cacheKey = `nearby_hoardings_${roundedLat}_${roundedLng}_${radius}`;
+      const cachedData = await AsyncStorage.getItem(cacheKey);
+      
+      if (cachedData) {
+        const { data, timestamp } = JSON.parse(cachedData);
+        const cacheAge = Date.now() - timestamp;
+        
+        // Use cache if it's less than 2 minutes old
+        if (cacheAge < 2 * 60 * 1000) {
+          console.log('Using cached hoarding data');
+          return data;
+        }
+      }
+      
       const response = await api.get('/hoardings/nearby', {
         params: { lat: latitude, lng: longitude, radius }
       });
+      
+      // Cache the new data
+      await AsyncStorage.setItem(cacheKey, JSON.stringify({
+        data: response.data,
+        timestamp: Date.now()
+      }));
+      
       return response.data;
     } catch (error) {
       console.error('Failed to fetch nearby hoardings:', error);
+      // If there's an error but we have cached data, return it as fallback
+      try {
+        const cacheKey = `nearby_hoardings_${Math.round(latitude * 1000) / 1000}_${Math.round(longitude * 1000) / 1000}_${radius}`;
+        const cachedData = await AsyncStorage.getItem(cacheKey);
+        if (cachedData) {
+          const { data } = JSON.parse(cachedData);
+          console.log('Using cached data as fallback due to error');
+          return data;
+        }
+      } catch (cacheError) {
+        console.error('Cache fallback failed:', cacheError);
+      }
       throw typeof error === 'string' ? error : 'Failed to fetch nearby hoardings. Please try again.';
     }
   },
@@ -193,4 +237,37 @@ export const hoardings = {
       throw typeof error === 'string' ? error : 'Failed to fetch hoardings. Please try again.';
     }
   },
+
+  getById: async (id) => {
+    try {
+      console.log('Fetching hoarding by id:', id);
+      const response = await api.get(`/hoardings/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch hoarding:', error);
+      throw typeof error === 'string' ? error : 'Failed to fetch hoarding details. Please try again.';
+    }
+  },
+
+  update: async (id, data) => {
+    try {
+      console.log('Updating hoarding:', { id, data });
+      const response = await api.put(`/hoardings/${id}`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update hoarding:', error);
+      throw typeof error === 'string' ? error : 'Failed to update hoarding. Please try again.';
+    }
+  },
+
+  delete: async (id) => {
+    try {
+      console.log('Deleting hoarding:', id);
+      const response = await api.delete(`/hoardings/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to delete hoarding:', error);
+      throw typeof error === 'string' ? error : 'Failed to delete hoarding. Please try again.';
+    }
+  }
 }; 

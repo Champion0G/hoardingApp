@@ -11,13 +11,14 @@ import {
   Platform,
 } from 'react-native';
 import { Button, Switch } from 'react-native-paper';
-import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { hoardings } from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Map from '../components/Map';
 
 const AddHoardingScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
-  const [location, setLocation] = useState(null);
+  const [initialRegion, setInitialRegion] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [address, setAddress] = useState('');
   const [formData, setFormData] = useState({
@@ -34,11 +35,24 @@ const AddHoardingScreen = ({ navigation }) => {
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           Alert.alert('Permission Denied', 'Location permission is required to add hoardings');
+          // Set default location (center of India)
+          setInitialRegion({
+            latitude: 20.5937,
+            longitude: 78.9629,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          });
           return;
         }
 
         let location = await Location.getCurrentPositionAsync({});
-        setLocation(location);
+        const region = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        };
+        setInitialRegion(region);
       } catch (error) {
         console.error('Error getting location:', error);
         Alert.alert('Error', 'Failed to get current location');
@@ -114,10 +128,24 @@ const AddHoardingScreen = ({ navigation }) => {
         address: address
       };
 
+      console.log('Submitting hoarding data:', hoardingData);
       await hoardings.add(hoardingData);
-      Alert.alert('Success', 'Hoarding added successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+      
+      // Clear all hoarding caches to force refresh
+      const keys = await AsyncStorage.getAllKeys();
+      const cachesToClear = keys.filter(key => key.startsWith('nearby_hoardings_'));
+      console.log('Clearing caches:', cachesToClear);
+      await AsyncStorage.multiRemove(cachesToClear);
+      
+      // Navigate back with refresh flag and the new hoarding location
+      navigation.navigate('Home', { 
+        refresh: Date.now(),
+        newHoarding: {
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude
+        }
+      });
+      Alert.alert('Success', 'Hoarding added successfully');
     } catch (error) {
       console.error('Error adding hoarding:', error);
       Alert.alert('Error', typeof error === 'string' ? error : 'Failed to add hoarding');
@@ -126,7 +154,7 @@ const AddHoardingScreen = ({ navigation }) => {
     }
   };
 
-  if (!location) {
+  if (!initialRegion) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" />
@@ -135,6 +163,15 @@ const AddHoardingScreen = ({ navigation }) => {
     );
   }
 
+  const selectedHoarding = selectedLocation ? {
+    _id: 'temp',
+    location: {
+      coordinates: [selectedLocation.longitude, selectedLocation.latitude]
+    },
+    title: 'Selected Location',
+    description: address
+  } : null;
+
   return (
     <KeyboardAvoidingView 
       style={styles.container} 
@@ -142,31 +179,19 @@ const AddHoardingScreen = ({ navigation }) => {
     >
       <ScrollView style={styles.scrollView}>
         <View style={styles.mapContainer}>
-          <MapView
-            style={styles.map}
-            initialRegion={{
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-              latitudeDelta: 0.0922,
-              longitudeDelta: 0.0421,
-            }}
+          <Map
+            initialRegion={initialRegion}
+            onRegionChange={() => {}}
+            hoardings={selectedHoarding ? [selectedHoarding] : []}
+            onMarkerPress={() => {}}
             onLongPress={handleLocationSelect}
-          >
-            {selectedLocation && (
-              <Marker
-                coordinate={selectedLocation}
-                title="Selected Location"
-                description={address}
-              />
-            )}
-          </MapView>
+          />
+          {selectedLocation && (
+            <View style={styles.addressContainer}>
+              <Text style={styles.addressText}>{address}</Text>
+            </View>
+          )}
         </View>
-
-        {selectedLocation && (
-          <View style={styles.addressContainer}>
-            <Text style={styles.addressText}>{address}</Text>
-          </View>
-        )}
 
         <View style={styles.form}>
           <TextInput
@@ -247,29 +272,27 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#f5f5f5',
     marginHorizontal: 16,
-    marginBottom: 16,
+    marginTop: 8,
     borderRadius: 8,
   },
   addressText: {
     fontSize: 14,
-    color: '#666',
+    color: '#333',
   },
   form: {
     padding: 16,
   },
   input: {
-    height: 40,
-    borderColor: '#ddd',
     borderWidth: 1,
+    borderColor: '#ddd',
+    padding: 12,
     marginBottom: 16,
-    paddingHorizontal: 8,
-    borderRadius: 4,
-    backgroundColor: 'white',
+    borderRadius: 8,
+    fontSize: 16,
   },
   textArea: {
     height: 100,
     textAlignVertical: 'top',
-    paddingTop: 8,
   },
   switchContainer: {
     flexDirection: 'row',
@@ -278,7 +301,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   button: {
-    marginTop: 16,
+    marginTop: 8,
   },
 });
 

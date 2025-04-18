@@ -54,10 +54,36 @@ function TabNavigator() {
         tabBarInactiveTintColor: 'gray',
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Search" component={SearchScreen} />
+      <Tab.Screen 
+        name="Home" 
+        component={HomeScreen} 
+        options={{
+          headerShown: true
+        }}
+      />
+      <Tab.Screen 
+        name="Search" 
+        component={SearchScreen}
+        options={{
+          headerShown: true
+        }}
+      />
       {userRole === 'authorized' && (
-        <Tab.Screen name="Add Hoarding" component={AddHoardingScreen} />
+        <Tab.Screen 
+          name="Add Hoarding" 
+          component={AddHoardingScreen}
+          options={{
+            headerShown: true,
+            tabBarLabel: 'Add',
+            tabBarIcon: ({ focused, color, size }) => (
+              <Ionicons 
+                name={focused ? 'add-circle' : 'add-circle-outline'} 
+                size={size} 
+                color={color}
+              />
+            )
+          }}
+        />
       )}
     </Tab.Navigator>
   );
