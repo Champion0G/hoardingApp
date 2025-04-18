@@ -158,6 +158,18 @@ export const auth = {
 };
 
 export const hoardings = {
+  add: async (hoardingData) => {
+    try {
+      console.log('Adding hoarding:', hoardingData);
+      const response = await api.post('/hoardings/add', hoardingData);
+      console.log('Hoarding added successfully');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to add hoarding:', error);
+      throw typeof error === 'string' ? error : 'Failed to add hoarding. Please try again.';
+    }
+  },
+
   getNearby: async (latitude, longitude, radius = 5000) => {
     try {
       console.log('Fetching nearby hoardings:', { latitude, longitude, radius });
